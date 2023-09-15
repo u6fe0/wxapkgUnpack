@@ -12,18 +12,19 @@ target_dir=/data/data/com.tencent.mm/MicroMsg/${user_id}/appbrand/pkg
 # 询问是否开始游戏
 # read -p "please play the game" var
 echo "copy start!"
-today=$(date +%Y%m%d)
-output_dir=/mnt/pkg${today}
+timeStamp=$(date +%s)
+output_dir=/mnt/${timeStamp}
 adb shell rm -rf ${output_dir}
 adb shell cp -r ${target_dir} ${output_dir}
-adb pull ${output_dir} pkgs/pkg${today}
+rm -rf pkgs/${timeStamp}
+adb pull ${output_dir} pkgs/${timeStamp}
 echo "copy finish!"
 
 # Unpack wxapkg
 # 遍历当前目录下{output_dir}目录里面所有wxapkg文件
 # 执行 node wuWxapkg.js xxx.wxapkg
 current_dir=$(pwd)
-sub_dir=pkgs/pkg${today}
+sub_dir=pkgs/${timeStamp}
 path=${current_dir}/${sub_dir}
 for file in ${path}/*.wxapkg
 do
