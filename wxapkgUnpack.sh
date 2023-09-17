@@ -1,8 +1,7 @@
 #!/bin/bash
-# 清空 /data/data/com.tencent.mm/MicroMsg/{user_id}/appbrand/pkg 底下资源
-# 其中{user_id}为类似 b080df3648b62ff828e1ef601ec5157d 字符串（进入到MicroMsg路径下输入ls命令查看）
-user_id=4fb63e53f867e03819d7951c3762ef63
-target_dir=/data/data/com.tencent.mm/MicroMsg/${user_id}/appbrand/pkg
+# 清空 /data/data/com.tencent.mm/MicroMsg/{user哈希值}/appbrand/pkg 底下资源
+user_hash=4fb63e53f867e03819d7951c3762ef63
+target_dir=/data/data/com.tencent.mm/MicroMsg/${user_hash}/appbrand/pkg
 # 询问是否清空缓存
 # read -p "cache clear? (y/n)" result
 # if [ $result == "y" ]; then
