@@ -1,8 +1,14 @@
 #!/bin/bash
+param1=$1;
 user_name=chenhao
 target_dir=/Users/${user_name}/Library/Containers/com.tencent.xinWeChat/Data/.wxapplet/packages
-# 清空目标目录
-# rm -rf ${target_dir}/*
+# 如果 param1 == latest，则获取最新的文件夹
+if [ $param1 = "latest" ]; then
+    # 获取最新的文件夹
+    latest_dir=$(ls -t ${target_dir} | head -1)
+    # 获取最新的文件夹的绝对路径
+    target_dir=${target_dir}/${latest_dir}
+fi
 timeStamp=$(date +%s)
 cp -r ${target_dir} pkgs/${timeStamp}
 # Unpack wxapkg
