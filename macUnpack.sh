@@ -8,6 +8,14 @@ if [ $param1 = "latest" ]; then
     latest_dir=$(ls -t ${target_dir} | head -1)
     # 获取最新的文件夹的绝对路径
     target_dir=${target_dir}/${latest_dir}
+else if [ $param1 = "clear" ]; then
+    rm -rf ${target_dir}
+    exit 0
+else if [ $param1 = "open" ]; then
+    open ${target_dir}
+    exit 0
+fi
+fi
 fi
 timeStamp=$(date +%s)
 cp -r ${target_dir} pkgs/${timeStamp}
