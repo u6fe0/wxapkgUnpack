@@ -3,15 +3,15 @@ const fs = require("fs");
 const https = require("https");
 const path = require("path");
 const { exit } = require("process");
-// 请先配置远程地址
-const CDN_URL = "xxx";
-if(CDN_URL == "xxx") {
-  console.log("请先配置CDN地址");
+// 请先配置远程地址 e.g. https://cdn-tm-cn-mini.com/1.1.1/remote/
+const CDN_URL = "https://cdn-tm-cn-mini.com/1.1.1/remote/";
+if(CDN_URL == "https://cdn-tm-cn-mini.com/1.1.1/remote/") {
+  console.warn("请先配置CDN地址");
   exit();
 }
 // 配置文件 config.json 位置
 if (process.argv.length < 3) {
-  console.log("请传入配置文件路径");
+  console.warn("请传入配置文件路径");
   exit();
 }
 
@@ -234,11 +234,11 @@ function download(url, dest, cb) {
       });
     })
     .on("error", function (downloadErr) {
-      console.log("download err", url, downloadErr);
+      console.error("download err", url, downloadErr);
       // Handle errors
       fs.unlink(dest, (unlinkErr) => {
         if (unlinkErr) {
-          console.log("unlink err", unlinkErr);
+          console.warn("unlink err", unlinkErr);
         }
         cb && cb();
       }); // Delete the file async. (But we don't check the result)
