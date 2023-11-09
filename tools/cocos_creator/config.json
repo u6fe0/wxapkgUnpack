@@ -1,0 +1,54 @@
+{
+  "paths": {
+    "0": ["2", 0],
+    "1": ["LabelAtlas", 3],
+    "2": ["AutoAtlas", 2],
+    "3": ["New AnimationClip", 4],
+    "4": ["2", 1, 1],
+    "5": ["New Material", 5]
+  },
+  "types": [
+    "cc.Texture2D",
+    "cc.SpriteFrame",
+    "cc.SpriteAtlas",
+    "cc.LabelAtlas",
+    "cc.AnimationClip",
+    "cc.Material"
+  ],
+  "uuids": [
+    "665i2rA4hIuqt29yfQETPL",
+    "2dO1/WZydH0Jtuo7o42oEe",
+    "30NmWvPkRMpamHwn38xzhP",
+    "4dgT0SDBdGOpQmNzKEcK5E",
+    "bfZlTkO6FBzbuu0WU+J1Gr",
+    "cbZSW8hOtK0ootkVFOvcQS",
+    "28dPjdQWxEQIG3VVl1Qm6T"
+  ],
+  "scenes": {},
+  "redirect": [6, 0],
+  "deps": ["internal"],
+  "packs": {},
+  "name": "resources",
+  "importBase": "import",
+  "nativeBase": "native",
+  "debug": false,
+  "isZip": false,
+  "encrypted": false,
+  "versions": {
+    "import": [
+      1,
+      "dc496",
+      2,
+      "047d8",
+      3,
+      "4add8",
+      0,
+      "4b3a3",
+      4,
+      "f5101",
+      5,
+      "7933b"
+    ],
+    "native": [0, "10974"]
+  }
+}
