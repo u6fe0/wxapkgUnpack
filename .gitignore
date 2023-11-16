@@ -1,3 +1,5 @@
 pkgs
 .vscode
 tools/cocos_creator/node_modules
+tools/cocos_creator/outputs
+tools/cocos_creator/settings

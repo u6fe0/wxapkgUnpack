@@ -7,10 +7,23 @@ const { exit } = require("process");
 const axios = require("axios");
 const fsPromises = require("fs").promises;
 
+// 获取传入的参数
+const args = process.argv.splice(2);
+if (args.length == 0) {
+  error("请输入参数");
+  exit();
+}
+// 读取配置文件
+const configFile = args[0];
+if (!fs.existsSync(configFile)) {
+  error("配置文件不存在");
+  exit();
+}
+
 // nodejs window is not defined
 global.window = {};
 try {
-  require("./settings.js");
+  require(configFile);
 } catch (error) {
   error(error);
   exit();
@@ -208,7 +221,7 @@ async function downloadFilesConcurrent(urls) {
   const promises = urls.map(async (url, index) => {
     const realUrl = CDN_URL + url;
     const domain = CDN_URL.split("/")[2];
-    const dest = __dirname + "/" + domain + "/" + url;
+    const dest = __dirname + "/outputs/" + domain + "/" + url;
     ensureDirectoryExistence(dest);
     try {
       const response = await axios.get(realUrl, {
