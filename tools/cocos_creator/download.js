@@ -237,35 +237,6 @@ function ensureDirectoryExistence(filePath) {
   ensureDirectoryExistence(dirname);
   fs.mkdirSync(dirname);
 }
-/**
- * 下载文件
- * @param {*} url
- * @param {*} dest
- * @param {*} cb
- */
-function download(url, dest, cb, tryCnt = 0) {
-  var file = fs.createWriteStream(dest);
-  https
-    .get(url, function (response) {
-      response.pipe(file);
-      file.on("finish", function () {
-        file.close(cb); // close() is async, call cb after close completes.
-      });
-    })
-    .on("error", function (downloadErr) {
-      if (downloadErr.code == "ECONNRESET" && tryCnt < 3) {
-        download(url, dest, cb, tryCnt + 1);
-        return;
-      }
-      // Handle errors
-      fs.unlink(dest, (unlinkErr) => {
-        if (unlinkErr) {
-          warn("unlink err", unlinkErr);
-        }
-        cb && cb();
-      }); // Delete the file async. (But we don't check the result)
-    });
-}
 
 async function getConfigContent(configUrl) {
   return new Promise((resolve, reject) => {
