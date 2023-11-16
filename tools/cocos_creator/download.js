@@ -57,7 +57,7 @@ const importTypes = [
   "cc.AudioClip",
 ];
 // 远程资源地址
-const CDN_URL = window._CCSettings.server + "remote/";
+const CDN_URL = window._CCSettings.server.replace(/\/$/, "") + "/remote/";
 log("CDN_URL", CDN_URL);
 // 配置文件
 const configUrls = [];
