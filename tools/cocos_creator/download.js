@@ -213,12 +213,25 @@ async function parse(configUrls) {
     await downloadFilesConcurrent(urls);
   }
 }
-
+// 最大并发数
+const maxConcurrency = 200;
+let curConcurrency = 0;
 // 并发下载
 async function downloadFilesConcurrent(urls) {
   const totalCount = urls.length;
   let downloadedCnt = 0;
+  process.stdout.write(
+    "downloading:" + downloadedCnt + "/" + totalCount + "\r"
+  );
   const promises = urls.map(async (url, index) => {
+    while (curConcurrency > maxConcurrency) {
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          resolve();
+        }, 100);
+      });
+    }
+    curConcurrency++;
     const realUrl = CDN_URL + url;
     const domain = CDN_URL.split("/")[2];
     const dest = __dirname + "/outputs/" + domain + "/" + url;
@@ -230,6 +243,7 @@ async function downloadFilesConcurrent(urls) {
       await fsPromises.writeFile(dest, response.data);
     } catch (error) {}
     downloadedCnt++;
+    curConcurrency--;
     process.stdout.write(
       "downloading:" + downloadedCnt + "/" + totalCount + "\r"
     );
