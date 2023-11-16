@@ -1,21 +1,20 @@
+const { log, warn, error } = require("console");
 const decodeUuid = require("./utils/decode-uuid");
 const fs = require("fs");
 const https = require("https");
 const path = require("path");
 const { exit } = require("process");
-// 请先配置远程地址 e.g. https://cdn-tm-cn-mini.com/1.1.1/remote/
-const CDN_URL = "https://cdn-tm-cn-mini.com/1.1.1/remote/";
-if(CDN_URL == "https://cdn-tm-cn-mini.com/1.1.1/remote/") {
-  console.warn("请先配置CDN地址");
-  exit();
-}
-// 配置文件 config.json 位置
-if (process.argv.length < 3) {
-  console.warn("请传入配置文件路径");
-  exit();
-}
+const axios = require("axios");
+const fsPromises = require("fs").promises;
 
-const configPath = process.argv[2];
+// nodejs window is not defined
+global.window = {};
+try {
+  require("./settings.js");
+} catch (error) {
+  error(error);
+  exit();
+}
 // 过滤的文件类型
 const filterTypes = [
   "cc.Texture2D",
@@ -29,6 +28,7 @@ const filterTypes = [
   "cc.Material",
   "cc.Prefab",
   "cc.AudioClip",
+  "cc.JsonAsset",
 ];
 const nativeTypes = ["cc.AudioClip", "cc.Texture2D", "cc.TTFFont"];
 const importTypes = [
@@ -43,167 +43,186 @@ const importTypes = [
   "cc.Prefab",
   "cc.AudioClip",
 ];
-fs.readFile(configPath, "utf8", (err, data) => {
-  if (err) {
-    console.error(err);
-    return;
-  }
-  const config = JSON.parse(data);
-  const importBase = config.versions.import;
-  const nativeBase = config.versions.native;
-  const types = config.types;
-  const bundleName = config.name;
-  // 所有的地址
-  const urls = [];
-  // 遍历packs
-  for (var key in config.packs) {
-    if (config.packs.hasOwnProperty(key)) {
-      // pack 是一个数组
-      const pack = config.packs[key];
-      const importIndex = importBase.findIndex((item) => {
-        return item == key;
-      });
-      const nextIndex = importIndex + 1;
-      if (importIndex > -1 && importBase[nextIndex]) {
-        const parentDir = "import";
-        const version = importBase[nextIndex];
-        const libUrlNoExt = key.slice(0, 2) + "/" + key;
-        const finalPath =
-          bundleName +
-          "/" +
-          parentDir +
-          "/" +
-          libUrlNoExt +
-          "." +
-          version +
-          ".json";
-        urls.push(finalPath);
-      }
-    }
-  }
-  // 遍历uuids
-  for (let i = 0; i < config.uuids.length; i++) {
-    const uuid = config.uuids[i];
-    const path = config.paths[i];
-    var uuid_de = decodeUuid(uuid);
-    const libUrlNoExt = uuid_de.slice(0, 2) + "/" + uuid_de;
-    if (path) {
-      const fileName = path[0];
-      const typeIndex = path[1];
-      const type = types[typeIndex];
-      if (filterTypes.indexOf(type) == -1) {
-        continue;
-      }
-      if (nativeTypes.indexOf(type) > -1) {
-        const parentDir = "native";
-        let postfix = "";
-        switch (type) {
-          case "cc.AudioClip":
-            // TODO:再判断是否是其他音频格式
-            postfix = ".mp3";
-            break;
-          case "cc.Texture2D":
-            // TODO:再判断是否是其他图片格式
-            postfix = ".png";
-            break;
-          case "cc.TTFFont":
-            postfix = "/" + fileName + ".ttf";
-            break;
-        }
-        const nativeIndex = nativeBase.findIndex((item) => {
-          return item == i;
-        });
-        const nextIndex = nativeIndex + 1;
-        if (nativeIndex > -1 && nativeBase[nextIndex]) {
-          const version = nativeBase[nextIndex];
-          const finalPath =
-            bundleName +
-            "/" +
-            parentDir +
-            "/" +
-            libUrlNoExt +
-            "." +
-            version +
-            postfix;
-          // console.log("native finalPath", uuid, finalPath);
-          urls.push(finalPath);
-        } else {
-          console.warn("[native miss]:", uuid, libUrlNoExt, i);
-        }
-      }
-      if (importTypes.indexOf(type) > -1) {
-        const parentDir = "import";
-        const postfix = ".json";
-        const importIndex = importBase.findIndex((item) => {
-          return item == i;
-        });
-        const nextIndex = importIndex + 1;
-        if (importIndex > -1 && importBase[nextIndex]) {
-          const version = importBase[nextIndex];
-          const finalPath =
-            bundleName +
-            "/" +
-            parentDir +
-            "/" +
-            libUrlNoExt +
-            "." +
-            version +
-            postfix;
-          // console.log("import finalPath", uuid, finalPath);
-          urls.push(finalPath);
-        } else {
-          console.warn("[import miss]:", uuid, libUrlNoExt, i);
-        }
-      }
+// 远程资源地址
+const CDN_URL = window._CCSettings.server + "remote/";
+log("CDN_URL", CDN_URL);
+// 配置文件
+const configUrls = [];
+for (let i = 0; i < window._CCSettings.remoteBundles.length; i++) {
+  const bundleName = window._CCSettings.remoteBundles[i];
+  const bundleVer = window._CCSettings.bundleVers[bundleName];
+  const configUrl = CDN_URL + bundleName + "/config." + bundleVer + ".json";
+  configUrls.push(configUrl);
+}
+// 开始解析
+parse(configUrls);
+async function parse(configUrls) {
+  // 获取configUrls， 缓存所有的config 内容
+  log("configUrls.length", configUrls.length);
+  for (let i = 0; i < configUrls.length; i++) {
+    log("configUrls", configUrls[i]);
+    const configUrl = configUrls[i];
+    const configContent = await getConfigContent(configUrl);
+    const config = JSON.parse(configContent);
+    // 所有的地址
+    const urls = [];
+    const types = config.types;
+    const name = config.name;
+    const packs = config.packs;
+    const isZip = config.isZip;
+    if (isZip) {
+      const zipVersion = config.zipVersion;
+      const finalPath = name + "/res." + zipVersion + ".zip";
+      urls.push(finalPath);
     } else {
-      // console.warn("path", uuid, "不存在");
+      let importBase = [];
+      let nativeBase = [];
+      if (config.versions) {
+        importBase = config.versions.import;
+        nativeBase = config.versions.native;
+      }
+      // 遍历packs
+      for (var key in packs) {
+        if (packs.hasOwnProperty(key)) {
+          // pack 是一个数组
+          const pack = packs[key];
+          const importIndex = importBase.findIndex((item) => {
+            return item == key;
+          });
+          const nextIndex = importIndex + 1;
+          if (importIndex > -1 && importBase[nextIndex]) {
+            const parentDir = "import";
+            const version = importBase[nextIndex];
+            const libUrlNoExt = key.slice(0, 2) + "/" + key;
+            const finalPath =
+              name +
+              "/" +
+              parentDir +
+              "/" +
+              libUrlNoExt +
+              "." +
+              version +
+              ".json";
+            urls.push(finalPath);
+          }
+        }
+      }
+
+      // 遍历uuids
+      for (let i = 0; i < config.uuids.length; i++) {
+        const uuid = config.uuids[i];
+        const path = config.paths[i];
+        var uuid_de = decodeUuid(uuid);
+        const libUrlNoExt = uuid_de.slice(0, 2) + "/" + uuid_de;
+        if (path) {
+          const fileName = path[0];
+          const typeIndex = path[1];
+          const type = types[typeIndex];
+          if (filterTypes.indexOf(type) == -1) {
+            continue;
+          }
+          if (nativeTypes.indexOf(type) > -1) {
+            const parentDir = "native";
+            let postfix = "";
+            switch (type) {
+              case "cc.AudioClip":
+                // TODO:再判断是否是其他音频格式
+                postfix = ".mp3";
+                break;
+              case "cc.Texture2D":
+                // TODO:再判断是否是其他图片格式
+                postfix = ".png";
+                break;
+              case "cc.TTFFont":
+                postfix = "/" + fileName + ".ttf";
+                break;
+            }
+            const nativeIndex = nativeBase.findIndex((item) => {
+              return item == i;
+            });
+            const nextIndex = nativeIndex + 1;
+            if (nativeIndex > -1 && nativeBase[nextIndex]) {
+              const version = nativeBase[nextIndex];
+              const finalPath =
+                name +
+                "/" +
+                parentDir +
+                "/" +
+                libUrlNoExt +
+                "." +
+                version +
+                postfix;
+              // log("native finalPath", uuid, finalPath);
+              urls.push(finalPath);
+            } else if (nativeBase.length == 0) {
+              const finalPath =
+                name + "/" + parentDir + "/" + libUrlNoExt + postfix;
+              // log("native finalPath", uuid, finalPath);
+              urls.push(finalPath);
+            } else {
+              // warn("[native miss]:", uuid, libUrlNoExt, i);
+            }
+          }
+          if (importTypes.indexOf(type) > -1) {
+            const parentDir = "import";
+            const postfix = ".json";
+            const importIndex = importBase.findIndex((item) => {
+              return item == i;
+            });
+            const nextIndex = importIndex + 1;
+            if (importIndex > -1 && importBase[nextIndex]) {
+              const version = importBase[nextIndex];
+              const finalPath =
+                name +
+                "/" +
+                parentDir +
+                "/" +
+                libUrlNoExt +
+                "." +
+                version +
+                postfix;
+              // log("import finalPath", uuid, finalPath);
+              urls.push(finalPath);
+            } else if (importBase.length == 0) {
+              const finalPath =
+                name + "/" + parentDir + "/" + libUrlNoExt + postfix;
+              // log("import finalPath", uuid, finalPath);
+              urls.push(finalPath);
+            } else {
+              // warn("[import miss]:", uuid, libUrlNoExt, i);
+            }
+          }
+        } else {
+          // warn("path", uuid, "不存在");
+        }
+      }
     }
+    await downloadFilesConcurrent(urls);
   }
-  // 已经下载的文件数
+}
+
+// 并发下载
+async function downloadFilesConcurrent(urls) {
   const totalCount = urls.length;
   let downloadedCnt = 0;
-  downloadFiles(
-    urls,
-    () => {
-      downloadedCnt++;
-      process.stdout.write(
-        "downloading:" + downloadedCnt + "/" + totalCount + "\r"
-      );
-    },
-    () => {
-      console.log("下载完成！！");
-      exit();
-    }
-  );
-});
-
-// 最大并发数
-const MaxMulti = 200;
-// 当前下载数
-let currentDownLoadCnt = 0;
-
-/**
- * 批量下载文件
- */
-function downloadFiles(urls, progressCb, finishCb) {
-  if (urls.length > 0) {
-    while (currentDownLoadCnt < MaxMulti) {
-      currentDownLoadCnt++;
-      const url = urls.shift();
-      const realUrl = CDN_URL + url;
-      const dest = __dirname + "/" + url;
-      ensureDirectoryExistence(dest);
-      download(realUrl, dest, () => {
-        currentDownLoadCnt--;
-        progressCb && progressCb(dest);
-        downloadFiles(urls, progressCb, finishCb);
+  const promises = urls.map(async (url, index) => {
+    const realUrl = CDN_URL + url;
+    const domain = CDN_URL.split("/")[2];
+    const dest = __dirname + "/" + domain + "/" + url;
+    ensureDirectoryExistence(dest);
+    try {
+      const response = await axios.get(realUrl, {
+        responseType: "arraybuffer",
       });
-    }
-  } else {
-    if (currentDownLoadCnt == 0) {
-      finishCb && finishCb();
-    }
-  }
+      await fsPromises.writeFile(dest, response.data);
+    } catch (error) {}
+    downloadedCnt++;
+    process.stdout.write(
+      "downloading:" + downloadedCnt + "/" + totalCount + "\r"
+    );
+  });
+
+  await Promise.all(promises);
 }
 /**
  * 确保文件夹存在
@@ -224,7 +243,7 @@ function ensureDirectoryExistence(filePath) {
  * @param {*} dest
  * @param {*} cb
  */
-function download(url, dest, cb) {
+function download(url, dest, cb, tryCnt = 0) {
   var file = fs.createWriteStream(dest);
   https
     .get(url, function (response) {
@@ -234,13 +253,36 @@ function download(url, dest, cb) {
       });
     })
     .on("error", function (downloadErr) {
-      console.error("download err", url, downloadErr);
+      if (downloadErr.code == "ECONNRESET" && tryCnt < 3) {
+        download(url, dest, cb, tryCnt + 1);
+        return;
+      }
       // Handle errors
       fs.unlink(dest, (unlinkErr) => {
         if (unlinkErr) {
-          console.warn("unlink err", unlinkErr);
+          warn("unlink err", unlinkErr);
         }
         cb && cb();
       }); // Delete the file async. (But we don't check the result)
     });
+}
+
+async function getConfigContent(configUrl) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(configUrl, (res) => {
+        let data = "";
+        // A chunk of data has been received.
+        res.on("data", (chunk) => {
+          data += chunk;
+        });
+        // The whole response has been received.
+        res.on("end", () => {
+          resolve(data);
+        });
+      })
+      .on("error", (err) => {
+        reject(err);
+      });
+  });
 }

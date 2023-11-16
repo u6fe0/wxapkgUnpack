@@ -1,0 +1,14 @@
+{
+  "name": "cocos_creator",
+  "version": "1.0.0",
+  "description": "提前在 download 中 配置 CDN_URL",
+  "main": "download.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.2"
+  }
+}
