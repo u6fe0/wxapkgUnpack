@@ -7,27 +7,6 @@ const { exit } = require("process");
 const axios = require("axios");
 const fsPromises = require("fs").promises;
 
-// 获取传入的参数
-const args = process.argv.splice(2);
-if (args.length == 0) {
-  error("请输入参数");
-  exit();
-}
-// 读取配置文件
-const configFile = args[0];
-if (!fs.existsSync(configFile)) {
-  error("配置文件不存在");
-  exit();
-}
-
-// nodejs window is not defined
-global.window = {};
-try {
-  require(configFile);
-} catch (error) {
-  error(error);
-  exit();
-}
 // 过滤的文件类型
 const filterTypes = [
   "cc.Texture2D",
@@ -42,8 +21,14 @@ const filterTypes = [
   "cc.Prefab",
   "cc.AudioClip",
   "cc.JsonAsset",
+  "cc.ImageAsset",
 ];
-const nativeTypes = ["cc.AudioClip", "cc.Texture2D", "cc.TTFFont"];
+const nativeTypes = [
+  "cc.AudioClip",
+  "cc.Texture2D",
+  "cc.TTFFont",
+  "cc.ImageAsset",
+];
 const importTypes = [
   "cc.Asset",
   "cc.BufferAsset",
@@ -56,17 +41,59 @@ const importTypes = [
   "cc.Prefab",
   "cc.AudioClip",
 ];
-// 远程资源地址
-const CDN_URL = window._CCSettings.server.replace(/\/$/, "") + "/remote/";
-log("CDN_URL", CDN_URL);
-// 配置文件
-const configUrls = [];
-for (let i = 0; i < window._CCSettings.remoteBundles.length; i++) {
-  const bundleName = window._CCSettings.remoteBundles[i];
-  const bundleVer = window._CCSettings.bundleVers[bundleName];
-  const configUrl = CDN_URL + bundleName + "/config." + bundleVer + ".json";
-  configUrls.push(configUrl);
+
+// 获取传入的参数
+const args = process.argv.splice(2);
+if (args.length == 0) {
+  error("请输入参数");
+  exit();
 }
+// 读取配置文件
+const configFile = args[0];
+if (!fs.existsSync(configFile)) {
+  error("配置文件不存在");
+  exit();
+}
+let CDN_URL = "";
+let configUrls = [];
+// 如果是js文件
+if (configFile.endsWith(".js")) {
+  // nodejs window is not defined
+  global.window = {};
+  try {
+    require(configFile);
+  } catch (error) {
+    error(error);
+    exit();
+  }
+  // 远程资源地址
+  CDN_URL = window._CCSettings.server.replace(/\/$/, "") + "/remote/";
+  log("CDN_URL", CDN_URL);
+  // 配置文件
+  for (let i = 0; i < window._CCSettings.remoteBundles.length; i++) {
+    const bundleName = window._CCSettings.remoteBundles[i];
+    const bundleVer = window._CCSettings.bundleVers[bundleName];
+    const configUrl = CDN_URL + bundleName + "/config." + bundleVer + ".json";
+    configUrls.push(configUrl);
+  }
+} else if (configFile.endsWith(".json")) {
+  const configContent = fs.readFileSync(configFile);
+  const config = JSON.parse(configContent);
+  // 远程资源地址
+  CDN_URL = config.assets.server.replace(/\/$/, "") + "/remote/";
+  log("CDN_URL", CDN_URL);
+  // 配置文件
+  for (let i = 0; i < config.assets.remoteBundles.length; i++) {
+    const bundleName = config.assets.remoteBundles[i];
+    const bundleVer = config.assets.bundleVers[bundleName];
+    const configUrl = CDN_URL + bundleName + "/config." + bundleVer + ".json";
+    configUrls.push(configUrl);
+  }
+} else {
+  error("配置文件格式不正确");
+  exit();
+}
+
 // 开始解析
 parse(configUrls);
 async function parse(configUrls) {
@@ -143,6 +170,7 @@ async function parse(configUrls) {
                 postfix = ".mp3";
                 break;
               case "cc.Texture2D":
+              case "cc.ImageAsset":
                 // TODO:再判断是否是其他图片格式
                 postfix = ".png";
                 break;
