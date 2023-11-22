@@ -23,12 +23,7 @@ const filterTypes = [
   "cc.JsonAsset",
   "cc.ImageAsset",
 ];
-const nativeTypes = [
-  "cc.AudioClip",
-  "cc.Texture2D",
-  "cc.TTFFont",
-  "cc.ImageAsset",
-];
+const nativeTypes = ["cc.AudioClip", "cc.TTFFont", "cc.ImageAsset"];
 const importTypes = [
   "cc.Asset",
   "cc.BufferAsset",
@@ -40,6 +35,8 @@ const importTypes = [
   "cc.Material",
   "cc.Prefab",
   "cc.AudioClip",
+  "cc.Texture2D",
+  "cc.ImageAsset",
 ];
 
 // 获取传入的参数

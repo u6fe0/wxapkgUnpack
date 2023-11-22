@@ -24,27 +24,28 @@
  THE SOFTWARE.
  ****************************************************************************/
 
-var Base64Values = require('./misc').BASE64_VALUES;
+var Base64Values = require("./misc").BASE64_VALUES;
 
-var HexChars = '0123456789abcdef'.split('');
+var HexChars = "0123456789abcdef".split("");
 
-var _t = ['', '', '', ''];
-var UuidTemplate = _t.concat(_t, '-', _t, '-', _t, '-', _t, '-', _t, _t, _t);
-var Indices = UuidTemplate.map(function (x, i) { return x === '-' ? NaN : i; }).filter(isFinite);
+var _t = ["", "", "", ""];
+var UuidTemplate = _t.concat(_t, "-", _t, "-", _t, "-", _t, "-", _t, _t, _t);
+var Indices = UuidTemplate.map(function (x, i) {
+  return x === "-" ? NaN : i;
+}).filter(isFinite);
 
 // fcmR3XADNLgJ1ByKhqcC5Z -> fc991dd7-0033-4b80-9d41-c8a86a702e59
 module.exports = function (base64) {
-    if (base64.length !== 22) {
-        return base64;
-    }
-    UuidTemplate[0] = base64[0];
-    UuidTemplate[1] = base64[1];
-    for (var i = 2, j = 2; i < 22; i += 2) {
-        var lhs = Base64Values[base64.charCodeAt(i)];
-        var rhs = Base64Values[base64.charCodeAt(i + 1)];
-        UuidTemplate[Indices[j++]] = HexChars[lhs >> 2];
-        UuidTemplate[Indices[j++]] = HexChars[((lhs & 3) << 2) | rhs >> 4];
-        UuidTemplate[Indices[j++]] = HexChars[rhs & 0xF];
-    }
-    return UuidTemplate.join('');
+  let endPos = base64.slice(22);
+  base64 = base64.slice(0, 22);
+  UuidTemplate[0] = base64[0];
+  UuidTemplate[1] = base64[1];
+  for (var i = 2, j = 2; i < 22; i += 2) {
+    var lhs = Base64Values[base64.charCodeAt(i)];
+    var rhs = Base64Values[base64.charCodeAt(i + 1)];
+    UuidTemplate[Indices[j++]] = HexChars[lhs >> 2];
+    UuidTemplate[Indices[j++]] = HexChars[((lhs & 3) << 2) | (rhs >> 4)];
+    UuidTemplate[Indices[j++]] = HexChars[rhs & 0xf];
+  }
+  return UuidTemplate.join("").concat(endPos);
 };
