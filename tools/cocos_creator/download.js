@@ -6,7 +6,9 @@ const path = require("path");
 const { exit } = require("process");
 const axios = require("axios");
 const fsPromises = require("fs").promises;
-
+// 最大并发数
+const maxConcurrency = 20;
+let curConcurrency = 0;
 // 过滤的文件类型
 const filterTypes = [
   "cc.Texture2D",
@@ -51,8 +53,8 @@ if (!fs.existsSync(configFile)) {
   error("配置文件不存在");
   exit();
 }
+const configUrls = [];
 let CDN_URL = "";
-let configUrls = [];
 // 如果是js文件
 if (configFile.endsWith(".js")) {
   // nodejs window is not defined
@@ -90,7 +92,6 @@ if (configFile.endsWith(".js")) {
   error("配置文件格式不正确");
   exit();
 }
-
 // 开始解析
 parse(configUrls);
 async function parse(configUrls) {
@@ -101,8 +102,10 @@ async function parse(configUrls) {
     const configUrl = configUrls[i];
     const configContent = await getConfigContent(configUrl);
     const config = JSON.parse(configContent);
+    // configUrl  去除 CDN_URL
+    const configUrlNoCDN = configUrl.replace(CDN_URL, "");
     // 所有的地址
-    const urls = [];
+    const urls = [configUrlNoCDN];
     const types = config.types;
     const name = config.name;
     const packs = config.packs;
@@ -238,9 +241,6 @@ async function parse(configUrls) {
     await downloadFilesConcurrent(urls);
   }
 }
-// 最大并发数
-const maxConcurrency = 200;
-let curConcurrency = 0;
 // 并发下载
 async function downloadFilesConcurrent(urls) {
   const totalCount = urls.length;
@@ -264,9 +264,13 @@ async function downloadFilesConcurrent(urls) {
     try {
       const response = await axios.get(realUrl, {
         responseType: "arraybuffer",
+        timeout: 15000, // 超时时间为15秒
+        maxContentLength: Infinity,
       });
       await fsPromises.writeFile(dest, response.data);
-    } catch (error) {}
+    } catch (err) {
+      error(`realUrl:${realUrl}, err.message:${err.message}`);
+    }
     downloadedCnt++;
     curConcurrency--;
     process.stdout.write(
