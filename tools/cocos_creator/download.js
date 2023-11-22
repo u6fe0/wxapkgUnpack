@@ -25,7 +25,12 @@ const filterTypes = [
   "cc.JsonAsset",
   "cc.ImageAsset",
 ];
-const nativeTypes = ["cc.AudioClip", "cc.TTFFont", "cc.ImageAsset"];
+const nativeTypes = [
+  "cc.AudioClip",
+  "cc.TTFFont",
+  "cc.ImageAsset",
+  "sp.SkeletonData",
+];
 const importTypes = [
   "cc.Asset",
   "cc.BufferAsset",
@@ -176,6 +181,9 @@ async function parse(configUrls) {
                 break;
               case "cc.TTFFont":
                 postfix = "/" + fileName + ".ttf";
+                break;
+              case "sp.SkeletonData":
+                postfix = ".bin";
                 break;
             }
             const nativeIndex = nativeBase.findIndex((item) => {
