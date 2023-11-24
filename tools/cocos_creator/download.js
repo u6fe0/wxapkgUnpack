@@ -243,6 +243,33 @@ async function parse(configUrls) {
           }
         } else {
           // warn("path", uuid, "不存在");
+          // 可能在packs中
+          const packs = config.packs;
+          // 如果pack 中包含这个uuid
+          for (var key in packs) {
+            if (packs.hasOwnProperty(key)) {
+              const parentDir = "import";
+              const postfix = ".json";
+              const importIndex = importBase.findIndex((item) => {
+                return item == i;
+              });
+              const nextIndex = importIndex + 1;
+              if (importIndex > -1 && importBase[nextIndex]) {
+                const version = importBase[nextIndex];
+                const finalPath =
+                  name +
+                  "/" +
+                  parentDir +
+                  "/" +
+                  libUrlNoExt +
+                  "." +
+                  version +
+                  postfix;
+                // log("import finalPath", uuid, finalPath);
+                urls.push(finalPath);
+              }
+            }
+          }
         }
       }
     }

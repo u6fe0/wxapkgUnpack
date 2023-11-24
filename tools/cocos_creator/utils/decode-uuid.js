@@ -27,7 +27,7 @@
 var Base64Values = require("./misc").BASE64_VALUES;
 
 var HexChars = "0123456789abcdef".split("");
-
+var separator = "@";
 var _t = ["", "", "", ""];
 var UuidTemplate = _t.concat(_t, "-", _t, "-", _t, "-", _t, "-", _t, _t, _t);
 var Indices = UuidTemplate.map(function (x, i) {
@@ -38,6 +38,9 @@ var Indices = UuidTemplate.map(function (x, i) {
 module.exports = function (base64) {
   let endPos = base64.slice(22);
   base64 = base64.slice(0, 22);
+  if (base64.length != 22) {
+    return base64;
+  }
   UuidTemplate[0] = base64[0];
   UuidTemplate[1] = base64[1];
   for (var i = 2, j = 2; i < 22; i += 2) {
