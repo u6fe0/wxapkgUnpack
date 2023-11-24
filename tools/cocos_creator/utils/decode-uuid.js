@@ -36,6 +36,11 @@ var Indices = UuidTemplate.map(function (x, i) {
 
 // fcmR3XADNLgJ1ByKhqcC5Z -> fc991dd7-0033-4b80-9d41-c8a86a702e59
 module.exports = function (base64) {
+  const strs = base64.split(separator);
+  const uuid = strs[0];
+  if (uuid.length !== 22) {
+    return base64;
+  }
   let endPos = base64.slice(22);
   base64 = base64.slice(0, 22);
   if (base64.length != 22) {
