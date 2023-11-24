@@ -30,6 +30,7 @@ const nativeTypes = [
   "cc.TTFFont",
   "cc.ImageAsset",
   "sp.SkeletonData",
+  "cc.Texture2D",
 ];
 const importTypes = [
   "cc.Asset",
