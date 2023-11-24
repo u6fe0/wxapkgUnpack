@@ -1,7 +1,7 @@
 // 还原 spine data
 // spine 动画文件由三个部分组成，分别是：xxx.atlas.txt、xxx.json、xxx.png
 // 经过 creator 编译后，config.json 的 paths 中会存在 xxx.atlas、xxx、xxx/texture、xxx/spriteFrame、xxx
-const { log, warn, error } = require("console");
+const { error } = require("console");
 const decodeUuid = require("./utils/decode-uuid");
 const fs = require("fs");
 const path = require("path");
@@ -231,8 +231,9 @@ for (const key in skeletonDataUrls) {
       if (!textureId) {
         continue;
       }
-      const urls = getTexturePath(config, textureId);
-      const urlWithPng = urls[0];
+      const separator = "@";
+      const strs = textureId.split(separator);
+      const urlWithPng = pngUrls[strs[0]];
       if (!urlWithPng) {
         continue;
       }
@@ -293,7 +294,6 @@ for (const key in skeletonDataUrls) {
       } catch (error) {
         console.log("atlasTxt:", atlasTxt);
       }
-
       // xxx.json
       let skelObj = skeletonData[5][0][4];
       if (!skelObj) {
@@ -314,7 +314,6 @@ for (const key in skeletonDataUrls) {
       } catch (error) {
         console.log("skelJson:", skelJson);
       }
-
       // xxx.png
       const textureId = skeletonData[1][0];
       if (!textureId) {
@@ -344,84 +343,6 @@ for (const key in skeletonDataUrls) {
   }
 }
 console.log("解析完成", parseCnt + "/" + keyCount);
-function getTexturePath(config, uuid) {
-  const separator = "@";
-  const strs = uuid.split(separator);
-  uuid = strs[0];
-  const i = config.uuids.indexOf(uuid);
-  const urls = [];
-  const path = config.paths[i];
-  var uuid_de = decodeUuid(uuid);
-  const libUrlNoExt = uuid_de.slice(0, 2) + "/" + uuid_de;
-  if (path) {
-    const fileName = path[0];
-    const typeIndex = path[1];
-    const type = types[typeIndex];
-    if (filterTypes.indexOf(type) == -1) {
-      return;
-    }
-    if (nativeTypes.indexOf(type) > -1) {
-      const parentDir = "native";
-      let postfix = "";
-      switch (type) {
-        case "cc.AudioClip":
-          // TODO:再判断是否是其他音频格式
-          postfix = ".mp3";
-          break;
-        case "cc.Texture2D":
-        case "cc.ImageAsset":
-          // TODO:再判断是否是其他图片格式
-          postfix = ".png";
-          break;
-        case "cc.TTFFont":
-          postfix = "/" + fileName + ".ttf";
-          break;
-        case "sp.SkeletonData":
-          postfix = ".bin";
-          break;
-      }
-      const nativeIndex = nativeBase.findIndex((item) => {
-        return item == i;
-      });
-      const nextIndex = nativeIndex + 1;
-      if (nativeIndex > -1 && nativeBase[nextIndex]) {
-        const version = nativeBase[nextIndex];
-        const finalPath =
-          parentDir + "/" + libUrlNoExt + "." + version + postfix;
-        // log("native finalPath", uuid, finalPath);
-        urls.push(finalPath);
-      } else if (nativeBase.length == 0) {
-        const finalPath = parentDir + "/" + libUrlNoExt + postfix;
-        // log("native finalPath", uuid, finalPath);
-        urls.push(finalPath);
-      } else {
-        // warn("[native miss]:", uuid, libUrlNoExt, i);
-      }
-    }
-    if (importTypes.indexOf(type) > -1) {
-      const parentDir = "import";
-      const postfix = ".json";
-      const importIndex = importBase.findIndex((item) => {
-        return item == i;
-      });
-      const nextIndex = importIndex + 1;
-      if (importIndex > -1 && importBase[nextIndex]) {
-        const version = importBase[nextIndex];
-        const finalPath =
-          parentDir + "/" + libUrlNoExt + "." + version + postfix;
-        urls.push(finalPath);
-      } else if (importBase.length == 0) {
-        const finalPath = parentDir + "/" + libUrlNoExt + postfix;
-        urls.push(finalPath);
-      } else {
-        // warn("[import miss]:", uuid, libUrlNoExt, i);
-      }
-    }
-  } else {
-    // warn("path", uuid, "不存在");
-  }
-  return urls;
-}
 function ensureDirectoryExistence(filePath) {
   var dirname = path.dirname(filePath);
   if (fs.existsSync(dirname)) {
