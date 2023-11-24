@@ -1,4 +1,4 @@
-const { log, warn, error } = require("console");
+const { log, error } = require("console");
 const decodeUuid = require("./utils/decode-uuid");
 const fs = require("fs");
 const https = require("https");
