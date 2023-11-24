@@ -27,6 +27,7 @@ const nativeTypes = [
   "cc.TTFFont",
   "cc.ImageAsset",
   "sp.SkeletonData",
+  "cc.Texture2D",
 ];
 const importTypes = [
   "cc.Asset",
@@ -65,6 +66,7 @@ const config = JSON.parse(configContent);
 // 遍历uuids
 const urls = [];
 const skeletonDataUrls = {};
+const pngUrls = {};
 const types = config.types;
 let importBase = [];
 let nativeBase = [];
@@ -120,6 +122,9 @@ for (let i = 0; i < config.uuids.length; i++) {
           }
           skeletonDataUrls[uuid]["native"] = finalPath;
         }
+        if (type == "cc.Texture2D" || type == "cc.ImageAsset") {
+          pngUrls[uuid] = finalPath;
+        }
       } else if (nativeBase.length == 0) {
         const finalPath = parentDir + "/" + libUrlNoExt + postfix;
         // log("native finalPath", uuid, finalPath);
@@ -129,6 +134,9 @@ for (let i = 0; i < config.uuids.length; i++) {
             skeletonDataUrls[uuid] = {};
           }
           skeletonDataUrls[uuid]["native"] = finalPath;
+        }
+        if (type == "cc.Texture2D" || type == "cc.ImageAsset") {
+          pngUrls[uuid] = finalPath;
         }
       } else {
         // warn("[native miss]:", uuid, libUrlNoExt, i);
@@ -186,72 +194,153 @@ for (const key in skeletonDataUrls) {
     }
     const skeletonDataStr = fs.readFileSync(realUrl);
     const skeletonData = JSON.parse(skeletonDataStr);
-    // xxx.atlas.txt
-    let atlasTxt = skeletonData[5][0][3];
-    if (!atlasTxt) {
-      continue;
+
+    const skelType = skeletonData[3][0][1][1];
+    // console.log("skelType:", skelType);
+    // .bin 类型
+    if (skelType == "_native") {
+      // xxx.atlas.txt
+      let atlasTxt = skeletonData[5][0][3];
+      if (!atlasTxt) {
+        continue;
+      }
+      // 如果 atlasTxt 是数组
+      if (Array.isArray(atlasTxt)) {
+        atlasTxt = atlasTxt[0];
+      }
+      const spineName = skeletonData[5][0][1];
+      if (!spineName) {
+        continue;
+      }
+      const atlasTxtUrl = path.join(
+        configFileDir,
+        "spine",
+        spineName,
+        spineName + ".atlas.txt"
+      );
+      // console.log("atlasTxtUrl:", atlasTxtUrl);
+      // 写文件
+      ensureDirectoryExistence(atlasTxtUrl);
+      try {
+        fs.writeFileSync(atlasTxtUrl, atlasTxt, "utf-8");
+      } catch (error) {
+        console.log("atlasTxt:", atlasTxt);
+      }
+      // xxx.png
+      const textureId = skeletonData[1][0];
+      if (!textureId) {
+        continue;
+      }
+      const urls = getTexturePath(config, textureId);
+      const urlWithPng = urls[0];
+      if (!urlWithPng) {
+        continue;
+      }
+      const realUrlWithPng = path.join(configFileDir, urlWithPng);
+      if (!fs.existsSync(realUrlWithPng)) {
+        continue;
+      }
+      const textureName = skeletonData[5][0][4][0];
+      if (!textureName) {
+        continue;
+      }
+      const textureTargetPath = path.join(
+        configFileDir,
+        "spine",
+        spineName,
+        textureName
+      );
+      // 拷贝
+      fs.copyFileSync(realUrlWithPng, textureTargetPath);
+      // xxx.bin
+      const realUrlWithBin = path.join(configFileDir, nativeUrl);
+      if (!fs.existsSync(realUrlWithBin)) {
+        continue;
+      }
+      const binTargetPath = path.join(
+        configFileDir,
+        "spine",
+        spineName,
+        spineName + ".skel"
+      );
+      // 拷贝
+      fs.copyFileSync(realUrlWithBin, binTargetPath);
+    } else if (skelType == "_atlasText") {
+      // xxx.atlas.txt
+      let atlasTxt = skeletonData[5][0][2];
+      if (!atlasTxt) {
+        continue;
+      }
+      // 如果 atlasTxt 是数组
+      if (Array.isArray(atlasTxt)) {
+        atlasTxt = atlasTxt[0];
+      }
+      const spineName = skeletonData[5][0][1];
+      if (!spineName) {
+        continue;
+      }
+      const atlasTxtUrl = path.join(
+        configFileDir,
+        "spine",
+        spineName,
+        spineName + ".atlas.txt"
+      );
+      // console.log("atlasTxtUrl:", atlasTxtUrl);
+      // 写文件
+      ensureDirectoryExistence(atlasTxtUrl);
+      try {
+        fs.writeFileSync(atlasTxtUrl, atlasTxt, "utf-8");
+      } catch (error) {
+        console.log("atlasTxt:", atlasTxt);
+      }
+
+      // xxx.json
+      let skelObj = skeletonData[5][0][4];
+      if (!skelObj) {
+        continue;
+      }
+      let skelJson = JSON.stringify(skelObj);
+      const skelJsonUrl = path.join(
+        configFileDir,
+        "spine",
+        spineName,
+        spineName + ".json"
+      );
+      // console.log("skelJsonUrl:", skelJsonUrl);
+      // 写文件
+      ensureDirectoryExistence(skelJsonUrl);
+      try {
+        fs.writeFileSync(skelJsonUrl, skelJson, "utf-8");
+      } catch (error) {
+        console.log("skelJson:", skelJson);
+      }
+
+      // xxx.png
+      const textureId = skeletonData[1][0];
+      if (!textureId) {
+        continue;
+      }
+      const urlWithPng = pngUrls[textureId];
+      if (!urlWithPng) {
+        continue;
+      }
+      const realUrlWithPng = path.join(configFileDir, urlWithPng);
+      if (!fs.existsSync(realUrlWithPng)) {
+        continue;
+      }
+      const textureName = skeletonData[5][0][3][0];
+      if (!textureName) {
+        continue;
+      }
+      const textureTargetPath = path.join(
+        configFileDir,
+        "spine",
+        spineName,
+        textureName
+      );
+      // 拷贝
+      fs.copyFileSync(realUrlWithPng, textureTargetPath);
     }
-    // 如果 atlasTxt 是数组
-    if (Array.isArray(atlasTxt)) {
-      atlasTxt = atlasTxt[0];
-    }
-    const spineName = skeletonData[5][0][1];
-    if (!spineName) {
-      continue;
-    }
-    const atlasTxtUrl = path.join(
-      configFileDir,
-      "spine",
-      spineName,
-      spineName + ".atlas.txt"
-    );
-    // console.log("atlasTxtUrl:", atlasTxtUrl);
-    // 写文件
-    ensureDirectoryExistence(atlasTxtUrl);
-    try {
-      fs.writeFileSync(atlasTxtUrl, atlasTxt, "utf-8");
-    } catch (error) {
-      console.log("atlasTxt:", atlasTxt);
-    }
-    // xxx.png
-    const textureId = skeletonData[1][0];
-    if (!textureId) {
-      continue;
-    }
-    const urls = getTexturePath(config, textureId);
-    const urlWithPng = urls[0];
-    if (!urlWithPng) {
-      continue;
-    }
-    const realUrlWithPng = path.join(configFileDir, urlWithPng);
-    if (!fs.existsSync(realUrlWithPng)) {
-      continue;
-    }
-    const textureName = skeletonData[5][0][4][0];
-    if (!textureName) {
-      continue;
-    }
-    const textureTargetPath = path.join(
-      configFileDir,
-      "spine",
-      spineName,
-      textureName
-    );
-    // 拷贝
-    fs.copyFileSync(realUrlWithPng, textureTargetPath);
-    // xxx.bin
-    const realUrlWithBin = path.join(configFileDir, nativeUrl);
-    if (!fs.existsSync(realUrlWithBin)) {
-      continue;
-    }
-    const binTargetPath = path.join(
-      configFileDir,
-      "spine",
-      spineName,
-      spineName + ".skel"
-    );
-    // 拷贝
-    fs.copyFileSync(realUrlWithBin, binTargetPath);
   }
 }
 console.log("解析完成", parseCnt + "/" + keyCount);
