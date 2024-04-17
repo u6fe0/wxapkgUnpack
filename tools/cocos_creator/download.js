@@ -46,7 +46,16 @@ const importTypes = [
   "cc.Texture2D",
   "cc.ImageAsset",
 ];
-
+const SUPPORT_TEXTURE_FORMATS = [
+  ".astc",
+  ".pkm",
+  ".pvr",
+  ".webp",
+  ".jpg",
+  ".jpeg",
+  ".bmp",
+  ".png",
+];
 // 获取传入的参数
 const args = process.argv.splice(2);
 if (args.length == 0) {
@@ -155,6 +164,7 @@ async function parse(configUrls) {
       }
 
       // 遍历uuids
+
       for (let i = 0; i < config.uuids.length; i++) {
         const uuid = config.uuids[i];
         const path = config.paths[i];
@@ -169,22 +179,24 @@ async function parse(configUrls) {
           }
           if (nativeTypes.indexOf(type) > -1) {
             const parentDir = "native";
-            let postfix = "";
+            let postfixs = [];
             switch (type) {
               case "cc.AudioClip":
                 // TODO:再判断是否是其他音频格式
-                postfix = ".mp3";
+                postfixs.push(".mp3");
                 break;
               case "cc.Texture2D":
               case "cc.ImageAsset":
-                // TODO:再判断是否是其他图片格式
-                postfix = ".png";
+                SUPPORT_TEXTURE_FORMATS.forEach((format) => {
+                  postfixs.push(format);
+                });
                 break;
               case "cc.TTFFont":
-                postfix = "/" + fileName + ".ttf";
+                const postfix = "/" + fileName + ".ttf";
+                postfixs.push(postfix);
                 break;
               case "sp.SkeletonData":
-                postfix = ".bin";
+                postfixs.push(".bin");
                 break;
             }
             const nativeIndex = nativeBase.findIndex((item) => {
@@ -192,23 +204,27 @@ async function parse(configUrls) {
             });
             const nextIndex = nativeIndex + 1;
             if (nativeIndex > -1 && nativeBase[nextIndex]) {
-              const version = nativeBase[nextIndex];
-              const finalPath =
-                name +
-                "/" +
-                parentDir +
-                "/" +
-                libUrlNoExt +
-                "." +
-                version +
-                postfix;
-              // log("native finalPath", uuid, finalPath);
-              urls.push(finalPath);
+              postfixs.forEach((postfix) => {
+                const version = nativeBase[nextIndex];
+                const finalPath =
+                  name +
+                  "/" +
+                  parentDir +
+                  "/" +
+                  libUrlNoExt +
+                  "." +
+                  version +
+                  postfix;
+                // log("native finalPath", uuid, finalPath);
+                urls.push(finalPath);
+              });
             } else if (nativeBase.length == 0) {
-              const finalPath =
-                name + "/" + parentDir + "/" + libUrlNoExt + postfix;
-              // log("native finalPath", uuid, finalPath);
-              urls.push(finalPath);
+              postfixs.forEach((postfix) => {
+                const finalPath =
+                  name + "/" + parentDir + "/" + libUrlNoExt + postfix;
+                // log("native finalPath", uuid, finalPath);
+                urls.push(finalPath);
+              });
             } else {
               // warn("[native miss]:", uuid, libUrlNoExt, i);
             }
