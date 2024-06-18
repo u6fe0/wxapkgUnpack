@@ -116,7 +116,13 @@ async function parse(configUrls) {
     log("configUrls", configUrls[i]);
     const configUrl = configUrls[i];
     const configContent = await getConfigContent(configUrl);
-    const config = JSON.parse(configContent);
+    let config = {};
+    try {
+      config = JSON.parse(configContent);
+    } catch (e) {
+      error("解析json失败", e);
+      continue;
+    }
     // configUrl  去除 CDN_URL
     const configUrlNoCDN = configUrl.replace(CDN_URL, "");
     // 所有的地址
