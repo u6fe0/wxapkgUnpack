@@ -100,8 +100,13 @@ if (configFile.endsWith(".js")) {
   for (let i = 0; i < config.assets.remoteBundles.length; i++) {
     const bundleName = config.assets.remoteBundles[i];
     const bundleVer = config.assets.bundleVers[bundleName];
-    const configUrl = CDN_URL + bundleName + "/config." + bundleVer + ".json";
-    configUrls.push(configUrl);
+    if (!bundleVer) {
+      const configUrl = CDN_URL + bundleName + "/config.json";
+      configUrls.push(configUrl);
+    } else {
+      const configUrl = CDN_URL + bundleName + "/config." + bundleVer + ".json";
+      configUrls.push(configUrl);
+    }
   }
 } else {
   error("配置文件格式不正确");
