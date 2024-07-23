@@ -94,12 +94,13 @@ if (configFile.endsWith(".js")) {
   const configContent = fs.readFileSync(configFile);
   const config = JSON.parse(configContent);
   // 远程资源地址
-  CDN_URL = config.assets.server.replace(/\/$/, "") + "/remote/";
+  const configAsssets = config.assets ? config.assets : config;
+  CDN_URL = configAsssets.server.replace(/\/$/, "") + "/remote/";
   log("CDN_URL", CDN_URL);
   // 配置文件
-  for (let i = 0; i < config.assets.remoteBundles.length; i++) {
-    const bundleName = config.assets.remoteBundles[i];
-    const bundleVer = config.assets.bundleVers[bundleName];
+  for (let i = 0; i < configAsssets.remoteBundles.length; i++) {
+    const bundleName = configAsssets.remoteBundles[i];
+    const bundleVer = configAsssets.bundleVers[bundleName];
     if (!bundleVer) {
       const configUrl = CDN_URL + bundleName + "/config.json";
       configUrls.push(configUrl);
